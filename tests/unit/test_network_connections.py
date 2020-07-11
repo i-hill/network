@@ -2998,6 +2998,324 @@ class TestValidator(unittest.TestCase):
         input_connection.update({"state": "absent"})
         self.assertValidationError(validator, input_connection)
 
+    def test_reference(self):
+        """
+        Test that one connection can refer to one defined before it.
+        """
+        self.maxDiff = None
+        bond0_expected = dict(self.default_connection_settings)
+        bond0_expected.update({
+            "actions": ["present"],
+            "bond": {
+                "miimon": None,
+                "mode": "balance-rr",
+            },
+            "interface_name": "bond0",
+            "name": "bond_int",
+            "persistent_state": "present",
+            "state": None,
+            "type": "bond",
+        })
+        eth0_expected = dict(self.default_connection_settings)
+        eth0_expected.update({
+            "actions": ["present"],
+            "interface_name": "eth0",
+            "master": "bond_int",
+            "name": "eth_int",
+            "persistent_state": "present",
+            "slave_type": "bond",
+            "state": None,
+            "type": "ethernet",
+        })
+
+        self.do_connections_validate(
+            [bond0_expected, eth0_expected],
+            [
+                {"name": "bond_int", "interface_name": "bond0", "type": "bond"},
+                {
+                    "name": "eth_int",
+                    "interface_name": "eth0",
+                    "type": "ethernet",
+                    "master": "bond_int",
+                    "slave_type": "bond"
+                }
+            ],
+            initscripts_dict_expected=[
+                {
+                    "ifcfg": {
+                        "BONDING_MASTER": "yes",
+                        "BONDING_OPTS": "mode=balance-rr",
+                        "BOOTPROTO": "dhcp",
+                        "DEVICE": "bond0",
+                        "IPV6INIT": "yes",
+                        "IPV6_AUTOCONF": "yes",
+                        "NM_CONTROLLED": "no",
+                        "ONBOOT": "yes",
+                        "TYPE": "Bond",
+                    },
+                    "keys": None,
+                    "route": None,
+                    "route6": None,
+                    "rule": None,
+                    "rule6": None,
+                },
+                {
+                    "ifcfg": {
+                        "DEVICE": "eth0",
+                        "MASTER": "bond0",
+                        "NM_CONTROLLED": "no",
+                        "ONBOOT": "yes",
+                        "SLAVE": "yes",
+                        "TYPE": "Ethernet",
+                    },
+                    "keys": None,
+                    "route": None,
+                    "route6": None,
+                    "rule": None,
+                    "rule6": None,
+                }
+            ]
+        )
+
+    def test_reference_default_if_name(self):
+        """
+        Test that one connection can refer to one defined before it, when
+        the interface_name is not explicitly defined.
+        """
+        self.maxDiff = None
+        bond0_expected = dict(self.default_connection_settings)
+        bond0_expected.update({
+            "actions": ["present"],
+            "bond": {
+                "miimon": None,
+                "mode": "balance-rr",
+            },
+            "interface_name": "bond0",
+            "name": "bond0",
+            "persistent_state": "present",
+            "state": None,
+            "type": "bond",
+        })
+        eth0_expected = dict(self.default_connection_settings)
+        eth0_expected.update({
+            "actions": ["present"],
+            "interface_name": "eth0",
+            "master": "bond0",
+            "name": "eth_int",
+            "persistent_state": "present",
+            "slave_type": "bond",
+            "state": None,
+            "type": "ethernet",
+        })
+
+        self.do_connections_validate(
+            [bond0_expected, eth0_expected],
+            [
+                {"name": "bond0", "type": "bond"},
+                {
+                    "name": "eth_int",
+                    "interface_name": "eth0",
+                    "type": "ethernet",
+                    "master": "bond0",
+                    "slave_type": "bond"
+                }
+            ],
+            initscripts_dict_expected=[
+                {
+                    "ifcfg": {
+                        "BONDING_MASTER": "yes",
+                        "BONDING_OPTS": "mode=balance-rr",
+                        "BOOTPROTO": "dhcp",
+                        "DEVICE": "bond0",
+                        "IPV6INIT": "yes",
+                        "IPV6_AUTOCONF": "yes",
+                        "NM_CONTROLLED": "no",
+                        "ONBOOT": "yes",
+                        "TYPE": "Bond",
+                    },
+                    "keys": None,
+                    "route": None,
+                    "route6": None,
+                    "rule": None,
+                    "rule6": None,
+                },
+                {
+                    "ifcfg": {
+                        "DEVICE": "eth0",
+                        "MASTER": "bond0",
+                        "NM_CONTROLLED": "no",
+                        "ONBOOT": "yes",
+                        "SLAVE": "yes",
+                        "TYPE": "Ethernet",
+                    },
+                    "keys": None,
+                    "route": None,
+                    "route6": None,
+                    "rule": None,
+                    "rule6": None,
+                }
+            ]
+        )
+
+    def test_reference_reverse_order(self):
+        """
+        Test that one connection can refer to one defined after it.
+        """
+        self.maxDiff = None
+        bond0_expected = dict(self.default_connection_settings)
+        bond0_expected.update({
+            "actions": ["present"],
+            "bond": {
+                "miimon": None,
+                "mode": "balance-rr",
+            },
+            "interface_name": "bond0",
+            "name": "bond_int",
+            "persistent_state": "present",
+            "state": None,
+            "type": "bond",
+        })
+        eth0_expected = dict(self.default_connection_settings)
+        eth0_expected.update({
+            "actions": ["present"],
+            "interface_name": "eth0",
+            "master": "bond_int",
+            "name": "eth_int",
+            "persistent_state": "present",
+            "slave_type": "bond",
+            "state": None,
+            "type": "ethernet",
+        })
+
+        self.do_connections_validate(
+            [eth0_expected, bond0_expected],
+            [
+                {
+                    "name": "eth_int",
+                    "interface_name": "eth0",
+                    "type": "ethernet",
+                    "master": "bond_int",
+                    "slave_type": "bond"
+                },
+                {"name": "bond_int", "interface_name": "bond0", "type": "bond"},
+            ],
+            initscripts_dict_expected=[
+                {
+                    "ifcfg": {
+                        "DEVICE": "eth0",
+                        "MASTER": "bond0",
+                        "NM_CONTROLLED": "no",
+                        "ONBOOT": "yes",
+                        "SLAVE": "yes",
+                        "TYPE": "Ethernet",
+                    },
+                    "keys": None,
+                    "route": None,
+                    "route6": None,
+                    "rule": None,
+                    "rule6": None,
+                },
+                {
+                    "ifcfg": {
+                        "BONDING_MASTER": "yes",
+                        "BONDING_OPTS": "mode=balance-rr",
+                        "BOOTPROTO": "dhcp",
+                        "DEVICE": "bond0",
+                        "IPV6INIT": "yes",
+                        "IPV6_AUTOCONF": "yes",
+                        "NM_CONTROLLED": "no",
+                        "ONBOOT": "yes",
+                        "TYPE": "Bond",
+                    },
+                    "keys": None,
+                    "route": None,
+                    "route6": None,
+                    "rule": None,
+                    "rule6": None,
+                }
+            ]
+        )
+
+    def test_reference_reverse_order_default_if_name(self):
+        """
+        Test that one connection can refer to one defined after it, when
+        the interface_name is not explicitly defined.
+        """
+        self.maxDiff = None
+        bond0_expected = dict(self.default_connection_settings)
+        bond0_expected.update({
+            "actions": ["present"],
+            "bond": {
+                "miimon": None,
+                "mode": "balance-rr",
+            },
+            "interface_name": "bond0",
+            "name": "bond0",
+            "persistent_state": "present",
+            "state": None,
+            "type": "bond",
+        })
+        eth0_expected = dict(self.default_connection_settings)
+        eth0_expected.update({
+            "actions": ["present"],
+            "interface_name": "eth0",
+            "master": "bond0",
+            "name": "eth_int",
+            "persistent_state": "present",
+            "slave_type": "bond",
+            "state": None,
+            "type": "ethernet",
+        })
+
+        self.do_connections_validate(
+            [eth0_expected, bond0_expected],
+            [
+                {
+                    "name": "eth_int",
+                    "interface_name": "eth0",
+                    "type": "ethernet",
+                    "master": "bond0",
+                    "slave_type": "bond"
+                },
+                {"name": "bond0", "type": "bond"},
+            ],
+            initscripts_dict_expected=[
+                {
+                    "ifcfg": {
+                        "DEVICE": "eth0",
+                        "MASTER": "bond0",
+                        "NM_CONTROLLED": "no",
+                        "ONBOOT": "yes",
+                        "SLAVE": "yes",
+                        "TYPE": "Ethernet",
+                    },
+                    "keys": None,
+                    "route": None,
+                    "route6": None,
+                    "rule": None,
+                    "rule6": None,
+                },
+                {
+                    "ifcfg": {
+                        "BONDING_MASTER": "yes",
+                        "BONDING_OPTS": "mode=balance-rr",
+                        "BOOTPROTO": "dhcp",
+                        "DEVICE": "bond0",
+                        "IPV6INIT": "yes",
+                        "IPV6_AUTOCONF": "yes",
+                        "NM_CONTROLLED": "no",
+                        "ONBOOT": "yes",
+                        "TYPE": "Bond",
+                    },
+                    "keys": None,
+                    "route": None,
+                    "route6": None,
+                    "rule": None,
+                    "rule6": None,
+                }
+            ]
+        )
+
 
 @my_test_skipIf(nmutil is None, "no support for NM (libnm via pygobject)")
 class TestNM(unittest.TestCase):

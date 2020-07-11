@@ -1448,7 +1448,7 @@ class ArgValidator_ListConnections(ArgValidatorList):
             if "type" in connection:
                 if connection["master"]:
                     c = ArgUtil.connection_find_by_name(
-                        connection["master"], result, idx
+                        connection["master"], result
                     )
                     if not c:
                         raise ValidationError(
